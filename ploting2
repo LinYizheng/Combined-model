@@ -1,0 +1,62 @@
+import numpy as np
+import pandas as pd
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.model_selection import RandomizedSearchCV,GridSearchCV,train_test_split
+from sklearn import preprocessing
+from sklearn.manifold import TSNE
+import json
+from matplotlib.ticker import FuncFormatter
+
+def plt_l(x1,x2,ylab,xlab,title= None,percent = None,label= None,marker=None,linestyle=None):
+    plt.plot(np.array(x1),c='blue',lw=2,marker=marker,label='True',linestyle=linestyle)
+    plt.plot(np.array(x2),c='red',lw=2,marker=marker,label='Predict',linestyle=linestyle)
+    plt.hlines(4.5474287282553405,0,x1.shape[0],linestyles='dashed',lw=1,label='OOC',color='red')#4.5474287282553405
+    plt.hlines(2.557017314652349,0,x1.shape[0],linestyles='dashed',lw=1,color='red')#2.557017314652349
+    plt.ylabel(ylab)
+    plt.xlabel(xlab)
+    #plt.ylim(7,9.5)
+    plt.title(title)
+    plt.legend(loc='best')
+
+def plt_s(x1,x2,ylab,xlab,title= None,percent = None,label= None,marker=None,linestyle=None):
+    plt.scatter(np.array(x2),np.array(x1),c='blue',s=1,marker=marker)
+    #plt.plot([7,9.5],[7,9.5],c='black',lw=1,marker=marker,linestyle=linestyle)
+    from sklearn.linear_model import LinearRegression as lr
+    regr = lr().fit(x2,x1)
+    r2 = regr.score(x2,x1)
+    plt.plot(x2,regr.predict(x2),c='red',lw=1,linestyle=linestyle)
+    #plt.plot(x1,x1,c='black',lw=1,linestyle=linestyle)
+    plt.ylabel(ylab)
+    plt.xlabel(xlab)
+    #plt.xlim(7,9.5)
+    #plt.ylim(7,9.5)
+    plt.title(title+'\nR^2'+'='+str(r2))
+    
+def plt_s_o(x1,x2,ylab,xlab,title= None,percent = None,label= None,marker=None,linestyle=None):
+    x=np.c_[np.array(x1),np.array(x2)]
+    x = x[x[:,0].argsort()]
+    plt.scatter(x[:,0].argsort(),x[:,0],c='blue',s=1,marker=marker)
+    plt.scatter(x[:,0].argsort(),x[:,1],c='green',s=1,marker=marker)
+    plt.ylabel(ylab)
+    plt.xlabel(xlab)
+    plt.title(title)
+    
+def plt_l_resid(x1,ylab,xlab,title= None,percent = None,label= None,marker=None,linestyle=None):
+    plt.plot(np.array(x1),c='black',lw=2,marker=marker,label=label,linestyle=linestyle)
+    plt.ylabel(ylab)
+    plt.xlabel(xlab)
+    plt.ylim(-1,4.3)
+    plt.title(title)
+    plt.legend(loc='best')
+plt.figure(figsize=(30,16))
+plt.subplot(3,1,1)
+plt_s(x1=y_test.reshape(-1,1),x2=trials.best_trial['result']['test_preds'].reshape(-1,1),ylab="True value",
+      xlab="Predict value",title='',linestyle='-')
+plt.subplot(3,1,2)
+plt_l(x1=y_test.reshape(-1,1),x2=trials.best_trial['result']['test_preds'].reshape(-1,1),ylab="Value",
+      xlab="Time index",title='',linestyle='-') 
+plt.subplot(3,1,3)
+plt_l_resid(x1=abs(trials.best_trial['result']['test_preds'].reshape(-1,1)-y_test.reshape(-1,1))
+      ,ylab="Absolute Error", xlab="Time index",title='',linestyle='-') 
