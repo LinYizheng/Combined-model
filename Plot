@@ -1,0 +1,102 @@
+import numpy as np
+import pandas as pd
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.model_selection import RandomizedSearchCV,GridSearchCV,train_test_split
+from sklearn import preprocessing
+from sklearn.manifold import TSNE
+import json
+from matplotlib.ticker import FuncFormatter
+
+
+def best_mean_performance_so_far(param,ylab,xlab,title,color,f,u,percent = None,label= None,linestyle=None):
+    
+    best_rmse_so_far_all=[]
+    for i in range(30):
+        best_rmse=1
+        best_rmse_so_far=[]
+        for j in range(50):
+            if param[i][j]<best_rmse:
+                best_rmse=param[i][j]
+                best_rmse_so_far.append(best_rmse)
+            else:
+                best_rmse_so_far.append(best_rmse)
+
+        best_rmse_so_far_all.append(best_rmse_so_far)
+    
+    plt.plot(range(f+1,u+1),np.array(best_rmse_so_far_all).mean(axis=0)[f:u],
+             c=color,lw=2,label=label,linestyle=linestyle)
+    plt.plot(range(f+1,u+1),1.96/32**0.5*np.array(best_rmse_so_far_all).std(axis=0)[f:u]+
+             np.array(best_rmse_so_far_all).mean(axis=0)[f:u],c=color,linestyle=linestyle,lw=0.5)
+    plt.plot(range(f+1,u+1),-1.96/32**0.5*np.array(best_rmse_so_far_all).std(axis=0)[f:u]+
+             np.array(best_rmse_so_far_all).mean(axis=0)[f:u],c=color,linestyle=linestyle,lw=0.5)
+    plt.ylabel(ylab)
+    plt.xlabel(xlab)
+    plt.title(title)
+    #plt.ylim(0.105,0.14)
+    plt.legend(loc=3)
+    new_ticks=range(f+1,u+1)
+    #plt.xticks(new_ticks)
+    if percent != None:
+        def to_percent(v,position):
+            return '%.2f'%(100*v)+'%'
+        plt.gca().yaxis.set_major_formatter(FuncFormatter(to_percent))
+
+plt.figure(figsize=(16,28))
+F=20
+U=50
+plt.subplot(5,2,1)
+best_mean_performance_so_far(param=tpe_result61['rfr_tpe']['rfr_test_rmse_all_tpe'],ylab="Best RMSE so far",
+                            xlab="Time",title="RMSE",color='red',f=F,u=U,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['rfr_rand']['rfr_test_rmse_all_rand'],ylab="Best RMSE so far",
+                xlab="Time",title="RMSE RandomForest",color='blue',f=F,u=U,label='RandomSearch',linestyle='-')
+plt.subplot(5,2,2)
+best_mean_performance_so_far(param=tpe_result61['rfr_tpe']['rfr_test_mape_all_tpe'],ylab="Best MAPE so far",
+                            xlab="Time",title="MAPE",color='red',f=F,u=U,percent=0,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['rfr_rand']['rfr_test_mape_all_rand'],ylab="Best MAPE so far",
+            xlab="Time",title="MAPE RandomForest",color='blue',f=F,u=U,percent=0,label='RandomSearch',linestyle='-')
+
+plt.subplot(5,2,3)
+best_mean_performance_so_far(param=tpe_result61['etr_tpe']['etr_test_rmse_all_tpe'],ylab="Best RMSE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['etr_rand']['etr_test_rmse_all_rand'],ylab="Best RMSE so far",
+                    xlab="Time",title="RMSE Extra-Trees",color='blue',f=F,u=U,label='RandomSearch',linestyle='-')
+plt.subplot(5,2,4)
+best_mean_performance_so_far(param=tpe_result61['etr_tpe']['etr_test_mape_all_tpe'],ylab="Best MAPE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,percent=0,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['etr_rand']['etr_test_mape_all_rand'],ylab="Best MAPE so far",
+             xlab="Time",title="MAPE Extra-Trees",color='blue',f=F,u=U,percent=0,label='RandomSearch',linestyle='-')
+
+plt.subplot(5,2,5)
+best_mean_performance_so_far(param=tpe_result61['xgbr_tpe']['xgbr_test_rmse_all_tpe'],ylab="Best RMSE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['xgbr_rand']['xgbr_test_rmse_all_rand'],ylab="Best RMSE so far",
+                    xlab="Time",title="RMSE XGBoost",color='blue',f=F,u=U,label='RandomSearch',linestyle='-')
+plt.subplot(5,2,6)
+best_mean_performance_so_far(param=tpe_result61['xgbr_tpe']['xgbr_test_mape_all_tpe'],ylab="Best MAPE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,percent=0,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['xgbr_rand']['xgbr_test_mape_all_rand'],ylab="Best MAPE so far",
+                            xlab="Time",title="MAPE XGBoost",color='blue',f=F,u=U,percent=0,label='RandomSearch',linestyle='-')
+
+plt.subplot(5,2,7)
+best_mean_performance_so_far(param=tpe_result61['lgbmr_tpe']['lgbmr_test_rmse_all_tpe'],ylab="Best RMSE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['lgbmr_rand']['lgbmr_test_rmse_all_rand'],ylab="Best RMSE so far",
+                    xlab="Time",title="RMSE lightGBM",color='blue',f=F,u=U,label='RandomSearch',linestyle='-')
+plt.subplot(5,2,8)
+best_mean_performance_so_far(param=tpe_result61['lgbmr_tpe']['lgbmr_test_mape_all_tpe'],ylab="Best MAPE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,percent=0,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['lgbmr_rand']['lgbmr_test_mape_all_rand'],ylab="Best MAPE so far",
+                    xlab="Time",title="MAPE lightGBM",color='blue',f=F,u=U,percent=0,label='RandomSearch',linestyle='-')
+
+plt.subplot(5,2,9)
+best_mean_performance_so_far(param=tpe_result61['combr_tpe']['combr_test_rmse_all_tpe'],ylab="Best RMSE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['combr_rand']['combr_test_rmse_all_rand'],ylab="Best RMSE so far",
+                    xlab="Time",title="RMSE CombinedModel",color='blue',f=F,u=U,label='RandomSearch',linestyle='-')
+plt.subplot(5,2,10)
+best_mean_performance_so_far(param=tpe_result61['combr_tpe']['combr_test_mape_all_tpe'],ylab="Best MAPE so far",
+                            xlab="Time",title="",color='red',f=F,u=U,percent=0,label='SMBO',linestyle='-')
+best_mean_performance_so_far(param=rand_result61['combr_rand']['combr_test_mape_all_rand'],ylab="Best MAPE so far",
+                            xlab="Time",title="MAPE CombinedModel",color='blue',f=F,u=U,percent=0,label='RandomSearch',linestyle='-')
