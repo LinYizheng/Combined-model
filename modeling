@@ -1,0 +1,230 @@
+
+#scaler=MinMaxScaler().fit(X)
+scaler=StandardScaler().fit(X)
+X_scale=scaler.transform(X)
+
+#Multiple experiments
+trials=30
+train_test_perform_combined_all=np.zeros((trials, 4))#4 performance index
+train_rmse_model_n= np.zeros((trials, 4))#4 base model
+train_mape_model_n= np.zeros((trials,4))
+test_rmse_model_n= np.zeros((trials, 4))
+test_mape_model_n= np.zeros((trials, 4))
+for trial in range(trials):
+    print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    #data split to trian and test dataset
+    X_train,X_test,y_train,y_test=train_test_split(X_scale,y,test_size=0.2,shuffle=True)
+    print('****************Base leaner hyperparameter optimization*********************')
+    #RandomForestRegressor
+    space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+            'max_depth':hp.choice('max_depth', range(3,30)),
+            'max_features':hp.uniform('max_features', 0.1,1)}
+    def objective(params):
+        model=RandomForestRegressor(
+            n_estimators=params['n_estimators'],max_depth=params['max_depth'],max_features=params['max_features'],
+            n_jobs=20)
+        model.fit(X_train,y_train)
+        train_preds=model.predict(X_train)   
+        train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+        train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+        #predict the test set
+        test_preds=model.predict(X_test)
+        test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+        test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+        return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+                'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    trials_rfr = Trials()
+    best_RFR= fmin(objective, space, algo=tpe.suggest, trials=trials_rfr, verbose=0, max_evals=50)
+    #print ("best_RFR:",best_RFR)
+    #print (trials_rfr.best_trial)
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+    #ExtraTreesRegressor
+    space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+            'max_depth':hp.choice('max_depth', range(3,30)),
+            'max_features':hp.uniform('max_features', 0.1,1)}
+    def objective(params):
+        model=ExtraTreesRegressor(
+            n_estimators=params['n_estimators'],max_depth=params['max_depth'],max_features=params['max_features'],
+            n_jobs=20)
+        model.fit(X_train,y_train)
+        train_preds=model.predict(X_train)   
+        train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+        train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+        #predict the test set
+        test_preds=model.predict(X_test)
+        test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+        test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+        return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+                'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    trials_etr = Trials()
+    best_ETR= fmin(objective, space, algo=tpe.suggest, trials=trials_etr, verbose=0, max_evals=50)
+    #print ("best_ETR:",best_ETR)
+    #print(trials_etr.best_trial)
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+    #XGBRegressor
+    space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+            'max_depth':hp.choice('max_depth', range(3,30)),
+            'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+            'subsample':hp.uniform('subsample', 0.5,1),
+            'colsample_bytree':hp.uniform('colsample_bytree', 0.1,1),
+            'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+    def objective(params):
+        model=xgb.sklearn.XGBRegressor(
+            max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+            subsample=params['subsample'],colsample_bytree=params['colsample_bytree'],reg_lambda=params['reg_lambda'],
+            nthread=20)
+        model.fit(X_train,y_train)
+        train_preds=model.predict(X_train)   
+        train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+        train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+        #predict the test set
+        test_preds=model.predict(X_test)
+        test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+        test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+        return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+                'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    trials_xgb = Trials()
+    best_XGBR= fmin(objective, space, algo=tpe.suggest, trials=trials_xgb, verbose=0, max_evals=50)
+    #print ("best_XGBR:",best_XGBR)
+    #print(trials_xgb.best_trial)
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+    #LGBMRegressor
+    space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+            'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+            'subsample':hp.uniform('subsample', 0.5,1),
+            'max_depth':hp.choice('max_depth', range(3,30)),
+            'colsample_bytree':hp.uniform('colsample_bytree', 0.1,1),
+            'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+    def objective(params):
+        model=lgb.LGBMRegressor(
+            max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+            subsample=params['subsample'],colsample_bytree=params['colsample_bytree'],reg_lambda=params['reg_lambda'],
+            n_jobs=20)
+        model.fit(X_train,y_train)
+        train_preds=model.predict(X_train)   
+        train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+        train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+        #predict the test set
+        test_preds=model.predict(X_test)
+        test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+        test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+        return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+                'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+    #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    trials_lgbr = Trials()
+    best_LGBR= fmin(objective, space, algo=tpe.suggest, trials=trials_lgbr, verbose=0, max_evals=50)
+    #print ("best_LGBR:",best_LGBR)
+    #print(trials_lgbr.best_trial)
+    print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    
+    print('****************Combined predicting*********************')
+    clfs = [RandomForestRegressor(n_estimators=best_RFR['n_estimators']+100,max_depth=best_RFR['max_depth']+3,
+                                  max_features=best_RFR['max_features'],n_jobs=20),
+            ExtraTreesRegressor(n_estimators=best_ETR['n_estimators']+100,max_depth=best_ETR['max_depth']+3,
+                                  max_features=best_ETR['max_features'],n_jobs=20),
+            xgb.sklearn.XGBRegressor(n_estimators=best_XGBR['n_estimators']+100,max_depth=best_XGBR['max_depth']+3,
+                                     learning_rate=best_XGBR['learning_rate'],subsample=best_XGBR['subsample'],
+                                     colsample_bytree=best_XGBR['colsample_bytree'],reg_lambda=best_XGBR['reg_lambda'],
+                                     nthread=20),
+            lgb.LGBMRegressor(n_estimators=best_LGBR['n_estimators']+100,max_depth=best_LGBR['max_depth']+3,
+                              learning_rate=best_LGBR['learning_rate'],subsample=best_LGBR['subsample'],
+                              colsample_bytree=best_LGBR['colsample_bytree'],reg_lambda=best_LGBR['reg_lambda'],
+                              n_jobs=20)]
+    print('****************Base leaner predicting*********************')
+    S_train = np.zeros((X_train.shape[0], len(clfs)))
+    S_test = np.zeros((X_test.shape[0], len(clfs)))
+    print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    for i, clf in enumerate(clfs):
+        #print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+        #print('model:',i)
+        S_test_i = np.zeros((X_test.shape[0], len(folds)))
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_train)[:]
+        S_train[:,i] = y_pred
+        S_test[:,i] = clf.predict(X_test)[:]
+
+    print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+    print('****************Meta leaner predicting*********************')
+    space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+            'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+            'subsample':hp.uniform('subsample', 0.5,1),
+            'max_depth':hp.choice('max_depth', range(3,30)),
+            'colsample_bytree':hp.uniform('colsample_bytree', 0.1,1),
+            'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+    def objective(params):
+        model=lgb.LGBMRegressor(
+            max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+            subsample=params['subsample'],colsample_bytree=params['colsample_bytree'],reg_lambda=params['reg_lambda'],
+            n_jobs=20)
+        model.fit(S_train,y_train)
+        train_preds=model.predict(S_train)   
+        train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+        train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+        #predict the test set
+        test_preds=model.predict(S_test)
+        test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+        test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+        return {'loss': test_rmse,'train_rmse': train_rmse,'test_rmse': test_rmse,'test_preds':test_preds,
+                'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+
+    trials = Trials()
+    best = fmin(objective, space, algo=tpe.suggest, trials=trials, verbose=0, max_evals=50)
+    #print ("best:",best)
+    print('sigma',round(trials.best_trial['result']['test_rmse']/y.std(),6))
+    train_test_perform_combined_all[trial,0]=trials.best_trial['result']['train_rmse']
+    train_test_perform_combined_all[trial,1]=trials.best_trial['result']['train_mape']
+    train_test_perform_combined_all[trial,2]=trials.best_trial['result']['test_rmse']
+    train_test_perform_combined_all[trial,3]=trials.best_trial['result']['test_mape']
+
+    #performance of base leaner
+    for i in xrange(S_train.shape[1]):
+        train_rmse_modeli=metrics.mean_squared_error(y_train.ravel(),S_train[:,i].ravel())**0.5  
+        train_mape_modeli=(abs(y_train.ravel()-S_train[:,i].ravel())/y_train.ravel()).mean()  
+        train_rmse_model_n[trial,i] = train_rmse_modeli
+        train_mape_model_n[trial,i] = train_mape_modeli
+    for i in xrange(S_test.shape[1]):
+        test_rmse_modeli=metrics.mean_squared_error(y_test.ravel(),S_test[:,i].ravel())**0.5  
+        test_mape_modeli=(abs(y_test.ravel()-S_test[:,i].ravel())/y_test.ravel()).mean()  
+        test_rmse_model_n[trial,i] = test_rmse_modeli
+        test_mape_model_n[trial,i] = test_mape_modeli
+    print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    np.save('train_test_perform_combined_all',train_test_perform_combined_all) 
+    np.save('train_rmse_model_n',train_rmse_model_n)
+    np.save('train_mape_model_n',train_mape_model_n)
+    np.save('test_rmse_model_n',test_rmse_model_n)
+    np.save('test_mape_model_n',test_mape_model_n)
+    #np.load('train_test_perform_combined_all.npy')
+print ('*****mean*****')
+print (train_test_perform_combined_all.mean(axis=0))
+print (train_rmse_model_n.mean(axis=0))
+print (train_mape_model_n.mean(axis=0))
+print (test_rmse_model_n.mean(axis=0))
+print (test_mape_model_n.mean(axis=0))
+print ('*****std*****')
+print (train_test_perform_combined_all.std(axis=0))
+print (train_rmse_model_n.std(axis=0))
+print (train_mape_model_n.std(axis=0))
+print (test_rmse_model_n.std(axis=0))
+print (test_mape_model_n.std(axis=0))
+print ('*****max*****')
+print (train_test_perform_combined_all.max(axis=0))
+print (train_rmse_model_n.max(axis=0))
+print (train_mape_model_n.max(axis=0))
+print (test_rmse_model_n.max(axis=0))
+print (test_mape_model_n.max(axis=0))
+print ('*****min*****')
+print (train_test_perform_combined_all.min(axis=0))
+print (train_rmse_model_n.min(axis=0))
+print (train_mape_model_n.min(axis=0))
+print (test_rmse_model_n.min(axis=0))
+print (test_mape_model_n.min(axis=0))
