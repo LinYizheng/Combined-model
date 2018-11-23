@@ -1,0 +1,351 @@
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder,StandardScaler,MinMaxScaler
+from sklearn import metrics
+from hyperopt import hp, fmin, tpe, hp, STATUS_OK, Trials,rand
+from hyperopt.mongoexp import MongoTrials
+import h5py
+from sklearn.model_selection import RandomizedSearchCV,train_test_split,KFold
+import matplotlib.pyplot as plt
+from sqlalchemy import *
+from sqlalchemy.engine import create_engine
+from sqlalchemy.schema import *
+from sklearn import svm,preprocessing,ensemble
+import time
+from pyhive import hive
+import sasl
+import thrift
+import thrift_sasl
+from sklearn.externals import joblib
+import xgboost as xgb
+import tensorflow as tf
+import sobol
+import datetime
+import os
+import math
+from __future__ import absolute_import,division,print_function
+import argparse
+import datetime 
+import sys
+import tensorflow as tf
+from pyDOE import *
+from sklearn.ensemble import RandomForestRegressor,ExtraTreesRegressor,GradientBoostingRegressor,BaggingRegressor,AdaBoostRegressor
+from sklearn.decomposition import KernelPCA,PCA
+from sklearn.cross_decomposition import PLSRegression
+from scipy import stats as st
+import lightgbm as lgb
+import catboost as cb
+
+#BaggingRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'max_samples':hp.uniform('max_samples', 0.5,1),
+        'max_features':hp.uniform('max_features', 0.1,1)}
+
+def objective(params):
+    model=BaggingRegressor(
+        n_estimators=params['n_estimators'],max_samples=params['max_samples'],max_features=params['max_features'],n_jobs=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_bagg = Trials()
+best_BaggR= fmin(objective, space, algo=tpe.suggest, trials=trials_bagg, verbose=0, max_evals=50)
+print ("best_BaggR:",best_BaggR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#RandomForestRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'max_features':hp.uniform('max_features', 0.1,1)}
+
+def objective(params):
+    model=RandomForestRegressor(
+        n_estimators=params['n_estimators'],max_depth=params['max_depth'],max_features=params['max_features'],n_jobs=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_rfr = Trials()
+best_RFR= fmin(objective, space, algo=tpe.suggest, trials=trials_rfr, verbose=0, max_evals=50)
+print ("best_RFR:",best_RFR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#ExtraTreesRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'max_features':hp.uniform('max_features', 0.1,1)}
+
+def objective(params):
+    model=ExtraTreesRegressor(
+        n_estimators=params['n_estimators'],max_depth=params['max_depth'],max_features=params['max_features'],n_jobs=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_etr = Trials()
+best_ETR= fmin(objective, space, algo=tpe.suggest, trials=trials_etr, verbose=0, max_evals=50)
+print ("best_ETR:",best_ETR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#AdaBoostRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'learning_rate':hp.uniform('learning_rate', 0.00001,1)}
+
+def objective(params):
+    model=AdaBoostRegressor(
+        n_estimators=params['n_estimators'],learning_rate=params['learning_rate'])
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_adabr = Trials()
+best_AdaBR= fmin(objective, space, algo=tpe.suggest, trials=trials_adabr, verbose=0, max_evals=50)
+print ("best_AdaBR:",best_AdaBR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#GradientBoostingRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'learning_rate':hp.uniform('learning_rate',0.00001,1),
+        'subsample':hp.uniform('subsample', 0.5,1),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'max_features':hp.uniform('max_features', 0.1,1)}
+
+def objective(params):
+    model=GradientBoostingRegressor(
+        n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],subsample=params['subsample'],
+        max_depth=params['max_depth'],max_features=params['max_features'])
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_gbr = Trials()
+best_GBR= fmin(objective, space, algo=tpe.suggest, trials=trials_gbr, verbose=0, max_evals=50)
+print ("best_GBR:",best_GBR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#XGBRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+        'subsample':hp.uniform('subsample', 0.5,1),
+        'colsample_bytree':hp.uniform('colsample_bytree', 0.1,1),
+        'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+def objective(params):
+    model=xgb.sklearn.XGBRegressor(
+        max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+        subsample=params['subsample'],colsample_bytree=params['colsample_bytree'],reg_lambda=params['reg_lambda'],nthread=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_xgb = Trials()
+best_XGBR= fmin(objective, space, algo=tpe.suggest, trials=trials_xgb, verbose=0, max_evals=50)
+print ("best_XGBR:",best_XGBR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#LGBMRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+        'subsample':hp.uniform('subsample', 0.5,1),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'colsample_bytree':hp.uniform('colsample_bytree', 0.1,1),
+        'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+def objective(params):
+    model=lgb.LGBMRegressor(
+        max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+        subsample=params['subsample'],colsample_bytree=params['colsample_bytree'],reg_lambda=params['reg_lambda'],
+        n_jobs=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_lgbr = Trials()
+best_LGBR= fmin(objective, space, algo=tpe.suggest, trials=trials_lgbr, verbose=0, max_evals=50)
+print ("best_LGBR:",best_LGBR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#CatBoostRegressor
+space ={'n_estimators':hp.choice('n_estimators', range(100,2000)),
+        'learning_rate':hp.uniform('learning_rate', 0.00001,1),
+        'subsample':hp.uniform('subsample', 0.5,1),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'colsample_bylevel':hp.uniform('colsample_bylevel', 0.1,1),
+        'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+def objective(params):
+    model=cb.CatBoostRegressor(
+        max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+        subsample=params['subsample'],colsample_bylevel=params['colsample_bylevel'],reg_lambda=params['reg_lambda'],
+        thread_count=20)
+    model.fit(X_train,y_train)
+    train_preds=model.predict(X_train)   
+    train_rmse=metrics.mean_squared_error(y_train.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y_train.ravel()-train_preds.ravel())/y_train.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(X_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse*test_mape,'train_rmse': train_rmse,'test_rmse': test_rmse,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+trials_cbr = Trials()
+best_CBR= fmin(objective, space, algo=tpe.suggest, trials=trials_cbr, verbose=0, max_evals=50)
+print ("best_CBR:",best_CBR)
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+#Combined Predicting
+clfs = [BaggingRegressor(n_estimators=best_BaggR['n_estimators']+100,max_samples=best_BaggR['max_samples'],
+                         max_features=best_BaggR['max_features'],n_jobs=20),
+        RandomForestRegressor(n_estimators=best_RFR['n_estimators']+100,max_depth=best_RFR['max_depth']+3,
+                              max_features=best_RFR['max_features'],n_jobs=20),
+        ExtraTreesRegressor(n_estimators=best_ETR['n_estimators']+100,max_depth=best_ETR['max_depth']+3,
+                              max_features=best_ETR['max_features'],n_jobs=20),
+        AdaBoostRegressor(n_estimators=best_AdaBR['n_estimators']+100,learning_rate=best_AdaBR['learning_rate']),
+        GradientBoostingRegressor(n_estimators=best_GBR['n_estimators']+100,learning_rate=best_GBR['learning_rate'],
+                                  subsample=best_GBR['subsample'],max_depth=best_GBR['max_depth']+3,
+                                  max_features=best_GBR['max_features']),
+        xgb.sklearn.XGBRegressor(n_estimators=best_XGBR['n_estimators']+100,max_depth=best_XGBR['max_depth']+3,
+                                 learning_rate=best_XGBR['learning_rate'],subsample=best_XGBR['subsample'],
+                                 colsample_bytree=best_XGBR['colsample_bytree'],reg_lambda=best_XGBR['reg_lambda'],
+                                 nthread=20),
+        lgb.LGBMRegressor(n_estimators=best_LGBR['n_estimators']+100,max_depth=best_LGBR['max_depth']+3,
+                          learning_rate=best_LGBR['learning_rate'],subsample=best_LGBR['subsample'],
+                          colsample_bytree=best_LGBR['colsample_bytree'],reg_lambda=best_LGBR['reg_lambda'],
+                          n_jobs=20),
+        cb.CatBoostRegressor(n_estimators=best_CBR['n_estimators']+100,max_depth=best_CBR['max_depth']+3,
+                          learning_rate=best_CBR['learning_rate'],subsample=best_CBR['subsample'],
+                          colsample_bylevel=best_CBR['colsample_bylevel'],reg_lambda=best_CBR['reg_lambda'],
+                             thread_count=20)]
+
+
+scaler=MinMaxScaler().fit(X)
+X_scale=scaler.transform(X)
+X_train0,X_test,y_train0,y_test=train_test_split(X_scale,y,test_size=0.1,shuffle=False)							 
+X = np.array(X_train0)
+y = np.array(y_train0)
+X_test = np.array(X_test)
+y_test = np.array(y_test)
+
+folds = list(KFold(n_splits=5, shuffle=True, random_state=2016).split(X))
+S_train = np.zeros((X.shape[0], len(clfs)))
+S_test = np.zeros((X_test.shape[0], len(clfs)))
+
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+for i, clf in enumerate(clfs):
+	print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+    print('model:',i)
+    S_test_i = np.zeros((X_test.shape[0], len(folds)))
+
+    for j, (train_idx, val_idx) in enumerate(folds):
+        X_train = X[train_idx]
+        y_train = y[train_idx]
+        X_holdout = X[val_idx]
+        # y_holdout = y[test_idx]
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_holdout)[:]
+        S_train[val_idx, i] = y_pred
+        S_test_i[:, j] = clf.predict(X_test)[:]
+
+    S_test[:, i] = S_test_i.mean(1)
+
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+
+space ={'n_estimators':hp.choice('n_estimators', range(100,500)),
+        'learning_rate':hp.uniform('learning_rate', 0,1),
+        'subsample':hp.uniform('subsample', 0,1),
+        'max_depth':hp.choice('max_depth', range(3,30)),
+        'colsample_bylevel':hp.uniform('colsample_bylevel', 0.1,1),
+        'reg_lambda':hp.uniform('reg_lambda', 0,5)}
+
+def objective(params):
+    model=cb.CatBoostRegressor(
+        max_depth=params['max_depth'],n_estimators=params['n_estimators'],learning_rate=params['learning_rate'],
+        subsample=params['subsample'],colsample_bylevel=params['colsample_bylevel'],reg_lambda=params['reg_lambda'],
+        thread_count=20)
+    model.fit(S_train,y)
+    train_preds=model.predict(S_train)   
+    train_rmse=metrics.mean_squared_error(y.ravel(),train_preds.ravel())**0.5  
+    train_mape=(abs(y.ravel()-train_preds.ravel())/y.ravel()).mean()
+    #predict the test set
+    test_preds=model.predict(S_test)
+    test_rmse=metrics.mean_squared_error(y_test.ravel(),test_preds.ravel())**0.5  
+    test_mape=(abs(y_test.ravel()-test_preds.ravel())/y_test.ravel()).mean()   
+    return {'loss': test_rmse,'train_rmse': train_rmse,'test_rmse': test_rmse,'test_preds':test_preds,
+            'train_mape':train_mape,'test_mape':test_mape, 'status': STATUS_OK }
+
+trials = Trials()
+best = fmin(objective, space, algo=tpe.suggest, trials=trials, verbose=0, max_evals=50)
+print ("best:",best)
+train_rmse = trials.best_trial['result']['train_rmse']
+test_rmse = trials.best_trial['result']['test_rmse']
+train_mape = trials.best_trial['result']['train_mape']
+test_mape = trials.best_trial['result']['test_mape']
+print('train_rmse:',train_rmse)
+print('test_rmse:',test_rmse)
+print('train_mape:',train_mape)
+print('test_mape:',test_mape)  
+print(test_rmse/y.std(),'sigma')
+print (time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
+
+plt.figure(figsize=(30,6))
+plt.subplot(1,3,1)
+plt_s(x1=y_test.reshape(-1,1),x2=trials.best_trial['result']['test_preds'].reshape(-1,1),ylab="y_true",
+      xlab="y_predict",title='',linestyle='-')
+plt.subplot(1,3,2)
+plt_s_o(x1=y_test.reshape(-1,1),x2=trials.best_trial['result']['test_preds'].reshape(-1,1),ylab="value",
+                        xlab="order",title='',linestyle='-')
+plt.subplot(1,3,3)
+plt_l(x1=y_test.reshape(-1,1),x2=trials.best_trial['result']['test_preds'].reshape(-1,1),ylab="value",
+      xlab="time index",title='',linestyle='-') 
